@@ -3,8 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#define VERSION 1.2
+#define VERSION 1.3
 #define DEV "Pávai Viktor"
 
 void version() {
@@ -22,7 +26,6 @@ void help() {
     printf("    -socket       Set the sending method to socket-based\n");
 }
 
-// 1. Feladat
 int check_arguments(int argc, char* argv[], int* mode, int* connection) {
     if (argc < 2) {
         printf("Error: You have to adjust switches to make your program run!\n");
@@ -75,19 +78,14 @@ int check_arguments(int argc, char* argv[], int* mode, int* connection) {
     return EXIT_SUCCESS;
 }
 
-// 2. Feladat
 int Measurement(int **Values) {
     srand(time(NULL));
     time_t currentTime;
     struct tm *localTime;
     time(&currentTime);
     localTime = localtime(&currentTime);
-    int min = localTime->tm_min;
+    int min = localTime->tm_min % 15;
     int sec = localTime->tm_sec;
-
-    while (min >= 15) {
-        min -= 15;
-    }
 
     int numberOfValues = (min * 60 + sec) > 100 ? min * 60 + sec : 100;
     *Values = (int *)malloc(numberOfValues * sizeof(int));
@@ -113,4 +111,58 @@ int Measurement(int **Values) {
     }
 
     return numberOfValues;
+}
+
+void BMPcreator(int *Values, int NumValues) {
+    int file = open("chart.bmp", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IROTH);
+    
+    unsigned int bmpSize = 62 + ((NumValues * NumValues) / 8);
+
+    unsigned char widthAndHeightMod = NumValues % 256;
+    unsigned char widthAndHeightDiv = NumValues / 256;
+
+    unsigned char bmpHeader[] = {
+            0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x3e, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, widthAndHeightMod, widthAndHeightDiv,
+            0x00, 0x00, widthAndHeightMod, widthAndHeightDiv, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x61, 0x0f,
+            0x00, 0x00, 0x61, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xee, 0xff, 0xff, 0x00,
+            0x11, 0xff
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        bmpHeader[i+2] = (unsigned char)(bmpSize & 0xFF);
+        bmpSize >>= 8;
+    }
+
+    int headerLength = sizeof(bmpHeader) / sizeof(bmpHeader[0]);
+    for (int i = 0; i < headerLength; i++) {
+        write(file, &bmpHeader[i], sizeof(unsigned char));
+    }
+
+    int width = NumValues, height = NumValues;
+
+    int line = NumValues, colum = NumValues;
+    if (NumValues % 32 != 0) {
+        line = width + (32 - (width % 32));
+        colum = height + (32 - (height % 32));
+    }
+
+    int size = (line * colum) / 8;
+    unsigned char *bmpPixels = calloc(size, sizeof(unsigned char));
+
+    int location;
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            location = (i * line + j) / 8;
+            if (i == Values[j] + height / 2) {
+                bmpPixels[location] += (1 << (7 - (j % 8)));
+            }
+        }
+    }
+
+    write(file, bmpPixels, size);
+    free(bmpPixels);
+    close(file);
 }
