@@ -1,5 +1,6 @@
 #include "header.h"
 #include <stdio.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -7,9 +8,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ctype.h>
 
-#define VERSION 1.3
+#define VERSION 1.4
 #define DEV "Pávai Viktor"
+
+#define SIZE 100
+#define MAX 300
 
 void version() {
     printf("Version: %.1f\n", VERSION);
@@ -165,4 +170,62 @@ void BMPcreator(int *Values, int NumValues) {
     write(file, bmpPixels, size);
     free(bmpPixels);
     close(file);
+}
+
+int FindPID() {
+    int pid = -1;
+    DIR *procDir;
+    struct dirent *entry;
+    char* proc = "/proc/";
+    char currentDir[SIZE];
+    char firstLine[MAX];
+    char lines[MAX];
+    char* token = "\t";
+    
+    procDir = opendir("/proc");
+    if (procDir == NULL) {
+        fprintf(stderr, "Error: Couldn't open directory.\n");
+        exit(4);
+    }
+
+    while ((entry = readdir(procDir)) != NULL) {
+        if (isdigit(entry->d_name[0])) {
+            currentDir[0] = '\0';
+            strcat(currentDir, proc);
+            strcat(currentDir, entry->d_name);
+            strcat(currentDir, "/status");
+
+            FILE *fp = fopen(currentDir, "r");
+
+            if (fp == NULL) {
+                fprintf(stderr, "Error: Couldn't open file.\n");
+                exit(5);
+            }
+
+            fgets(firstLine, MAX, fp);
+
+            char* name = strtok(firstLine, token);
+            name = strtok(NULL, token);
+
+            if (strcmp(name, "chart\n") == 0) {
+                while (fgets(lines, MAX, fp) != NULL) {
+                    if (lines[0]=='P' && lines[1]=='i' && lines[2]=='d' && lines[3]==':' && lines[4]=='\t') {
+                        char* pidString = strtok(lines, token);
+                        pidString = strtok(NULL, token);
+                        fclose(fp);
+                        pid = atoi(pidString);
+                        goto end;
+                    }
+                }
+            }
+        
+            fclose(fp);
+        }
+    }
+
+end:
+
+    closedir(procDir);
+
+    return pid;
 }

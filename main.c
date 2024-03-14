@@ -20,8 +20,12 @@ int main(int argc, char* argv[]) {
     if (mode == 0) {
         int numberOfValues = Measurement(&values);
         free(values);
-        EXIT_SUCCESS;
+        return EXIT_SUCCESS;
     }
+
+    int negyesfeladat = FindPID();
+
+    printf("%d\n", negyesfeladat);
 
     return 0;
 }
