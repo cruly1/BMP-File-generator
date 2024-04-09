@@ -1,14 +1,18 @@
-#include "header.h"
 #include <stdio.h>
-#include <dirent.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
-#include <sys/types.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <ctype.h>
+#include <string.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <sys/types.h>
 
 #define VERSION 1.4
 #define DEV "Pávai Viktor"
@@ -214,6 +218,11 @@ int FindPID() {
                         pidString = strtok(NULL, token);
                         fclose(fp);
                         pid = atoi(pidString);
+
+                        if (pid == getpid()) {
+                            pid = -1;
+                        }
+
                         goto end;
                     }
                 }
@@ -228,4 +237,66 @@ end:
     closedir(procDir);
 
     return pid;
+}
+
+void SendViaFile(int *Values, int NumValues) {
+    FILE* fp = fopen("Measurements.txt", "w");
+
+    if (fp == NULL) {
+        fprintf(stderr, "Hiba a fájl megnyitásakor\n");
+        exit(5);
+    }
+
+    for (int i = 0; i < NumValues; i++) {
+        fprintf(fp, "%d\n", Values[i]);
+    }
+
+    fclose(fp);
+
+    int PID = FindPID();
+
+    if (PID == -1) {
+        fprintf(stderr, "Hiba a PID keresésekor\n");
+        exit(6);
+    }
+    
+    kill(PID, SIGUSR1);
+}
+
+void ReceiveViaFile(int sig) {
+    int *Values = NULL;
+    FILE *file = fopen("Measurements.txt", "r");
+    
+    if (file == NULL) {
+        fprintf(stderr, "Hiba a fájl megnyitásakor\n");
+        exit(7);
+    }
+
+    char line[SIZE];
+    int i = 0;
+    while (fgets(line, SIZE, file) != NULL) {
+        Values = realloc(Values,(i+1)*sizeof(int)); 
+        int value = atoi(line);
+        Values[i] = value;
+        i++;
+    }
+
+    fclose(file);
+    BMPcreator(Values, i);
+    free(Values);
+}
+
+void SignalHandler(int sig) {
+    if (sig == SIGINT) {
+        printf("Goodbye!\n");
+        EXIT_SUCCESS;
+    }
+    if (sig == SIGUSR1) {
+        printf("Data transfer through file is not available\n");
+        exit(8);
+    }
+    if (sig == SIGALRM) {
+        printf("Server currently not responding\n");
+        exit(9);
+    }
 }
