@@ -243,7 +243,7 @@ void SendViaFile(int *Values, int NumValues) {
     FILE* fp = fopen("Measurements.txt", "w");
 
     if (fp == NULL) {
-        fprintf(stderr, "Hiba a fájl megnyitásakor\n");
+        fprintf(stderr, "Error: Couldn't open file\n");
         exit(5);
     }
 
@@ -256,7 +256,7 @@ void SendViaFile(int *Values, int NumValues) {
     int PID = FindPID();
 
     if (PID == -1) {
-        fprintf(stderr, "Hiba a PID keresésekor\n");
+        fprintf(stderr, "Error: Couldn't find PID.\n");
         exit(6);
     }
     
@@ -268,8 +268,8 @@ void ReceiveViaFile(int sig) {
     FILE *file = fopen("Measurements.txt", "r");
     
     if (file == NULL) {
-        fprintf(stderr, "Hiba a fájl megnyitásakor\n");
-        exit(7);
+        fprintf(stderr, "Error: Couldn't open file\n");
+        exit(5);
     }
 
     char line[SIZE];
@@ -292,11 +292,11 @@ void SignalHandler(int sig) {
         EXIT_SUCCESS;
     }
     if (sig == SIGUSR1) {
-        printf("Data transfer through file is not available\n");
-        exit(8);
+        printf("Error: Data transfer through file is not available\n");
+        exit(7);
     }
     if (sig == SIGALRM) {
-        printf("Server currently not responding\n");
-        exit(9);
+        printf("Error: Server currently not responding\n");
+        exit(8);
     }
 }

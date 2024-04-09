@@ -21,4 +21,9 @@ This project was made for System Programming course at the Faculty of Informatic
 1 - invalid filename
 2 - no given command line arguments
 3 - couldn't allocate memory
+4 - couldn't open directory
+5 - couldn't open file
+6 - couldn't find pid
+7 - data transfer through file is not available
+8 - server currently not responding
 ```
