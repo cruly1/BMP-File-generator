@@ -14,7 +14,7 @@
 #include <signal.h>
 #include <sys/types.h>
 
-#define VERSION 1.4
+#define VERSION 1.5
 #define DEV "Pávai Viktor"
 
 #define SIZE 100

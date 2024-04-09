@@ -8,4 +8,9 @@ int Measurement(int **Values);
 void BMPcreator(int *Values, int NumValues);
 // 4. Feladat
 int FindPID();
+// 5. Feladat
+void SendViaFile(int *Values, int NumValues);
+void ReceiveViaFile(int sig);
+// 7. Feladat
+void SignalHandler(int sig);
 #endif
