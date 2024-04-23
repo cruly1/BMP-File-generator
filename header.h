@@ -1,5 +1,6 @@
 #ifndef header
 #define header
+
 // 1. Feladat
 int check_arguments(int argc, char* argv[], int* mode, int* connection);
 // 2. Feladat
@@ -11,6 +12,10 @@ int FindPID();
 // 5. Feladat
 void SendViaFile(int *Values, int NumValues);
 void ReceiveViaFile(int sig);
+// 6. Feladat
+void SendViaSocket(int *Values, int NumValues);
+void ReceiveViaSocket();
 // 7. Feladat
 void SignalHandler(int sig);
+
 #endif

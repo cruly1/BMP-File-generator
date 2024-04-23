@@ -26,4 +26,9 @@ This project was made for System Programming course at the Faculty of Informatic
 6 - couldn't find pid
 7 - data transfer through file is not available
 8 - server currently not responding
+9 - couldn't create socket
+10 - sending error
+11 - receiving error
+12 - values do not match
+13 - couldn't connect to socket
 ```

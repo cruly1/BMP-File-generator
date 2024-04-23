@@ -14,7 +14,7 @@
 #include <signal.h>
 #include <sys/types.h>
 
-#define VERSION 1.5
+#define VERSION 1.6
 #define DEV "Pávai Viktor"
 
 #define SIZE 100
@@ -35,13 +35,13 @@ void help() {
     printf("    -socket       Set the sending method to socket-based\n");
 }
 
-int check_arguments(int argc, char* argv[], int* mode, int* connection) {
+int check_arguments(int argc, char *argv[], int *mode, int *connection) {
     if (argc < 2) {
-        printf("Error: You have to adjust switches to make your program run!\n");
+        fprintf(stderr, "Error: You have to adjust switches to make your program run!\n");
         exit(2);
     }
 
-    char* valid_args[] = {"--version", "--help", "-send", "-receive", "-file", "-socket"};
+    char *valid_args[] = {"--version", "--help", "-send", "-receive", "-file", "-socket"};
     int size = sizeof valid_args / sizeof valid_args[0];
     int ctr = 0;
 
@@ -64,7 +64,7 @@ int check_arguments(int argc, char* argv[], int* mode, int* connection) {
         }
     }
 
-    if (ctr != argc-1) {
+    if (ctr != argc - 1) {
         help();
         return EXIT_SUCCESS;
     }
@@ -114,7 +114,7 @@ int Measurement(int **Values) {
             *(*Values + i) = *(*Values + (i - 1)) + 1;
         } else if (random <= 78.341) {
             *(*Values + i) = *(*Values + (i - 1)) - 1;
-        } else  {
+        } else {
             *(*Values + i) = *(*Values + (i - 1));
         }
     }
@@ -124,24 +124,23 @@ int Measurement(int **Values) {
 
 void BMPcreator(int *Values, int NumValues) {
     int file = open("chart.bmp", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IROTH);
-    
+
     unsigned int bmpSize = 62 + ((NumValues * NumValues) / 8);
 
     unsigned char widthAndHeightMod = NumValues % 256;
     unsigned char widthAndHeightDiv = NumValues / 256;
 
     unsigned char bmpHeader[] = {
-            0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x3e, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, widthAndHeightMod, widthAndHeightDiv,
-            0x00, 0x00, widthAndHeightMod, widthAndHeightDiv, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x61, 0x0f,
-            0x00, 0x00, 0x61, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xee, 0xff, 0xff, 0x00,
-            0x11, 0xff
-    };
+        0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x3e, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, widthAndHeightMod, widthAndHeightDiv,
+        0x00, 0x00, widthAndHeightMod, widthAndHeightDiv, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x61, 0x0f,
+        0x00, 0x00, 0x61, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xee, 0xff, 0xff, 0x00,
+        0x11, 0xff};
 
     for (int i = 0; i < 4; ++i) {
-        bmpHeader[i+2] = (unsigned char)(bmpSize & 0xFF);
+        bmpHeader[i + 2] = (unsigned char)(bmpSize & 0xFF);
         bmpSize >>= 8;
     }
 
@@ -180,12 +179,12 @@ int FindPID() {
     int pid = -1;
     DIR *procDir;
     struct dirent *entry;
-    char* proc = "/proc/";
+    char *proc = "/proc/";
     char currentDir[SIZE];
     char firstLine[MAX];
     char lines[MAX];
-    char* token = "\t";
-    
+    char *token = "\t";
+
     procDir = opendir("/proc");
     if (procDir == NULL) {
         fprintf(stderr, "Error: Couldn't open directory.\n");
@@ -213,8 +212,8 @@ int FindPID() {
 
             if (strcmp(name, "chart\n") == 0) {
                 while (fgets(lines, MAX, fp) != NULL) {
-                    if (lines[0]=='P' && lines[1]=='i' && lines[2]=='d' && lines[3]==':' && lines[4]=='\t') {
-                        char* pidString = strtok(lines, token);
+                    if (lines[0] == 'P' && lines[1] == 'i' && lines[2] == 'd' && lines[3] == ':' && lines[4] == '\t') {
+                        char *pidString = strtok(lines, token);
                         pidString = strtok(NULL, token);
                         fclose(fp);
                         pid = atoi(pidString);
@@ -227,7 +226,7 @@ int FindPID() {
                     }
                 }
             }
-        
+
             fclose(fp);
         }
     }
@@ -240,7 +239,7 @@ end:
 }
 
 void SendViaFile(int *Values, int NumValues) {
-    FILE* fp = fopen("Measurements.txt", "w");
+    FILE *fp = fopen("Measurements.txt", "w");
 
     if (fp == NULL) {
         fprintf(stderr, "Error: Couldn't open file\n");
@@ -259,14 +258,14 @@ void SendViaFile(int *Values, int NumValues) {
         fprintf(stderr, "Error: Couldn't find PID.\n");
         exit(6);
     }
-    
+
     kill(PID, SIGUSR1);
 }
 
 void ReceiveViaFile(int sig) {
     int *Values = NULL;
     FILE *file = fopen("Measurements.txt", "r");
-    
+
     if (file == NULL) {
         fprintf(stderr, "Error: Couldn't open file\n");
         exit(5);
@@ -274,9 +273,10 @@ void ReceiveViaFile(int sig) {
 
     char line[SIZE];
     int i = 0;
+    int value;
     while (fgets(line, SIZE, file) != NULL) {
-        Values = realloc(Values,(i+1)*sizeof(int)); 
-        int value = atoi(line);
+        Values = realloc(Values, (i + 1) * sizeof(int));
+        value = atoi(line);
         Values[i] = value;
         i++;
     }
@@ -286,17 +286,164 @@ void ReceiveViaFile(int sig) {
     free(Values);
 }
 
+void SendViaSocket(int *Values, int NumValues) {
+    int s;
+    int bytes;
+    int flag = 0;
+    char on = 1;
+    unsigned int server_size;
+    struct sockaddr_in server;
+
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_port = htons(3333);
+    server_size = sizeof server;
+
+    s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) {
+        fprintf(stderr, "Error: Couldn't create socket.\n");
+        exit(9);
+    }
+
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on);
+    setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof on);
+
+    bytes = sendto(s, &NumValues, sizeof(NumValues), flag, (struct sockaddr *)&server, server_size);
+    if (bytes <= 0) {
+        fprintf(stderr, "Error: Sending error.\n");
+        exit(10);
+    }
+
+    // signal(SIGALRM,SignalHandler);
+
+    int response = 0;
+    bytes = recvfrom(s, &response, sizeof(int), flag, (struct sockaddr *) &server, &server_size);
+    if (bytes < 0) {
+        fprintf(stderr, "Error: Receiving error.\n");
+        exit(11);
+    }
+
+    if (response != NumValues) {
+        fprintf(stderr, "Error: Values do not match.\n");
+        exit(12);
+    }
+
+    bytes = sendto(s, Values, sizeof(int) * NumValues, flag, (struct sockaddr *)&server, server_size);
+    if (bytes <= 0) {
+        fprintf(stderr, "Error: Sending error.\n");
+        exit(10);
+    }
+
+    bytes = recvfrom(s, &response, sizeof(int), flag, (struct sockaddr *)&server, &server_size);
+    if (bytes < 0) {
+        fprintf(stderr, "Error: Receiving error.\n");
+        exit(11);
+    }
+
+    if (response != NumValues) {
+        fprintf(stderr, "Error: Values do not match.\n");
+        exit(12);
+    }
+
+    close(s);
+}
+
+void ReceiveViaSocket() {
+    int s;
+    int err;
+    int bytes;
+    int flag = 0;
+    char on = 1;
+    int NumValues;
+
+    unsigned int server_size;
+    unsigned int client_size;
+
+    struct sockaddr_in server;
+    struct sockaddr_in client;
+
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(3333);
+    server_size = sizeof(server);
+    client_size = sizeof(client);
+
+    s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) {
+        fprintf(stderr, "Error: Couldn't create socket.\n");
+        exit(9);
+    }
+
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on);
+    setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof on);
+
+    err = bind(s, (struct sockaddr *) &server, server_size);
+    if (err < 0) {
+        fprintf(stderr, "Error: Couldn't connect to socket.\n");
+        exit(13);
+    }
+
+    while (1) {
+        printf("Varakozas adatokra\n");
+
+        bytes = recvfrom(s, &NumValues, sizeof(NumValues), flag, (struct sockaddr *)&client, &client_size);
+        if (bytes < 0) {
+            fprintf(stderr, "Error: Receiving error.\n");
+            exit(11);
+        }
+
+        bytes = sendto(s, &NumValues, sizeof(NumValues), flag, (struct sockaddr *)&client, client_size);
+        if (bytes <= 0) {
+            fprintf(stderr, "Error: Sending error.\n");
+            exit(10);
+        }
+        printf("Tomb meretenek ellenorzese\n");
+
+        int data_size = NumValues * sizeof(int);
+        int *data = (int *)malloc(data_size);
+        if (data == NULL) {
+            fprintf(stderr, "Error: Couldn't allocate memory.");
+            exit(3);
+        }
+        printf("Tomb meretenek foglalasa\n");
+
+        bytes = recvfrom(s, data, sizeof(int) * NumValues, flag, (struct sockaddr *)&client, &client_size);
+        if (bytes < 0) {
+            fprintf(stderr, "Error: Receiving error.\n");
+            exit(11);
+        }
+        printf("Tomb adatok erkezese\n");
+
+        int receivedNumValues = bytes / sizeof(int);
+
+        bytes = sendto(s, &receivedNumValues, sizeof(int), flag, (struct sockaddr *)&client, client_size);
+        if (bytes <= 0) {
+            fprintf(stderr, "Error: Sending error.\n");
+            exit(10);
+        }
+        if (receivedNumValues != NumValues) {
+            printf("bazmeg a kurva oreg anyad\n");
+        }
+        printf("Beerkezett adatok erkezese\n");
+
+        BMPcreator(data, NumValues);
+        free(data);
+    }
+
+    close(s);
+}
+
 void SignalHandler(int sig) {
     if (sig == SIGINT) {
         printf("Goodbye!\n");
         EXIT_SUCCESS;
     }
     if (sig == SIGUSR1) {
-        printf("Error: Data transfer through file is not available\n");
+        fprintf(stderr, "Error: Data transfer through file is not available\n");
         exit(7);
     }
     if (sig == SIGALRM) {
-        printf("Error: Server currently not responding\n");
+        fprintf(stderr, "Error: Server currently not responding\n");
         exit(8);
     }
 }
