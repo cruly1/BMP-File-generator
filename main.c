@@ -2,19 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-/*
-
-send = mode 0
-receive = mode 1
-
-file = connection 0
-socket = connection 1
-
-*/
+#include <signal.h>
+#include <unistd.h>
 
 int main(int argc, char* argv[]) {
-
     if (strcmp(argv[0], "./chart") != 0) {
         printf("Error: Invalid filename. Filename has to be chart!\n");
         exit(1);
@@ -25,19 +16,34 @@ int main(int argc, char* argv[]) {
 
     check_arguments(argc, argv, &mode, &connection);
 
-    int *values = NULL;
-
-    if (mode == 0 && connection) {
-        int numberOfValues = Measurement(&values);
-        SendViaSocket(values, numberOfValues);
-        free(values);
+    if (mode < 0 || connection < 0){
         return EXIT_SUCCESS;
     }
 
-    if (mode && connection) {
-        ReceiveViaSocket();
-        return EXIT_SUCCESS;
+    signal(SIGINT,SignalHandler);
+    signal(SIGUSR1,SignalHandler);
+
+    int *Values = NULL;
+    int NumValues = Measurement(&Values);
+
+    if (mode) {
+        if (connection) {
+            ReceiveViaSocket();
+        } else {
+            while (1) {
+                signal(SIGUSR1, ReceiveViaFile);
+                pause();
+            }
+        }
+    } else {
+        if (connection) {
+            SendViaSocket(Values, NumValues);
+        } else {
+            SendViaFile(Values, NumValues);
+        }
     }
+
+    free(Values);
 
     return 0;
 }

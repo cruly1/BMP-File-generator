@@ -7,22 +7,43 @@
 #include <dirent.h>
 #include <ctype.h>
 #include <string.h>
-#include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <pthread.h>
 
-#define VERSION 1.6
+#define VERSION "1.8"
+#define DATE "2024-04-28"
 #define DEV "Pávai Viktor"
 
 #define SIZE 100
 #define MAX 300
 
-void version() {
-    printf("Version: %.1f\n", VERSION);
-    printf("Developed by: %s\n", DEV);
+void* printVersion(){
+    printf("Chart version \t%s\n", VERSION);
+    return NULL;
+}
+
+void* printDate(){
+    printf("Built on \t%s\n", DATE);
+    return NULL;
+}
+
+void* printDeveloper(){
+    printf("Developed by \t%s\n", DEV);
+    return NULL;
+}
+
+void* version(){
+    pthread_t thread1, thread2, thread3;
+    pthread_create(&thread1, NULL, printVersion, (void*) VERSION);
+    pthread_create(&thread2, NULL, printDate, (void*) DATE);
+    pthread_create(&thread3, NULL, printDeveloper, (void*) DEV);
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+    pthread_join(thread3, NULL);
 }
 
 void help() {
@@ -49,11 +70,15 @@ int check_arguments(int argc, char *argv[], int *mode, int *connection) {
         for (int j = 0; j < size; j++) {
             if (strcmp(argv[i], "--version") == 0) {
                 version();
+                *mode = -1;
+                *connection = -1;
                 return EXIT_SUCCESS;
             }
 
             if (strcmp(argv[i], "--help") == 0) {
                 help();
+                *mode = -1;
+                *connection = -1;
                 return EXIT_SUCCESS;
             }
 
@@ -239,10 +264,13 @@ end:
 }
 
 void SendViaFile(int *Values, int NumValues) {
-    FILE *fp = fopen("Measurements.txt", "w");
+    char* filename = "Measurements.txt";
+    FILE *fp = fopen(filename, "w");
+
+    printf("Sending %s.\n", filename);
 
     if (fp == NULL) {
-        fprintf(stderr, "Error: Couldn't open file\n");
+        fprintf(stderr, "Error: Couldn't open file.\n");
         exit(5);
     }
 
@@ -260,11 +288,16 @@ void SendViaFile(int *Values, int NumValues) {
     }
 
     kill(PID, SIGUSR1);
+    printf("Received successfully.\n");
 }
 
 void ReceiveViaFile(int sig) {
     int *Values = NULL;
-    FILE *file = fopen("Measurements.txt", "r");
+    char* filename = "Measurements.txt";
+    
+    FILE *file = fopen(filename, "r");
+    
+    printf("\tReading %s.\n", filename);
 
     if (file == NULL) {
         fprintf(stderr, "Error: Couldn't open file\n");
@@ -283,7 +316,23 @@ void ReceiveViaFile(int sig) {
 
     fclose(file);
     BMPcreator(Values, i);
+    printf("Generating BMP file.\n");
     free(Values);
+}
+
+void SignalHandler(int sig) {
+    if (sig == SIGINT) {
+        printf("Goodbye!\n");
+        exit(EXIT_SUCCESS);
+    }
+    if (sig == SIGUSR1) {
+        fprintf(stderr, "Error: Data transfer through file is not available\n");
+        exit(7);
+    }
+    if (sig == SIGALRM) {
+        fprintf(stderr, "Error: Server currently not responding\n");
+        exit(8);
+    }
 }
 
 void SendViaSocket(int *Values, int NumValues) {
@@ -314,7 +363,9 @@ void SendViaSocket(int *Values, int NumValues) {
         exit(10);
     }
 
-    // signal(SIGALRM,SignalHandler);
+    signal(SIGALRM, SignalHandler);
+    sleep(1);
+    signal(SIGALRM, SIG_IGN);
 
     int response = 0;
     bytes = recvfrom(s, &response, sizeof(int), flag, (struct sockaddr *) &server, &server_size);
@@ -384,7 +435,7 @@ void ReceiveViaSocket() {
     }
 
     while (1) {
-        printf("Varakozas adatokra\n");
+        printf("\tWaiting for data...\n");
 
         bytes = recvfrom(s, &NumValues, sizeof(NumValues), flag, (struct sockaddr *)&client, &client_size);
         if (bytes < 0) {
@@ -397,7 +448,7 @@ void ReceiveViaSocket() {
             fprintf(stderr, "Error: Sending error.\n");
             exit(10);
         }
-        printf("Tomb meretenek ellenorzese\n");
+        printf("Checking array size.\n");
 
         int data_size = NumValues * sizeof(int);
         int *data = (int *)malloc(data_size);
@@ -405,14 +456,14 @@ void ReceiveViaSocket() {
             fprintf(stderr, "Error: Couldn't allocate memory.");
             exit(3);
         }
-        printf("Tomb meretenek foglalasa\n");
+        printf("Allocating array's size.\n");
 
         bytes = recvfrom(s, data, sizeof(int) * NumValues, flag, (struct sockaddr *)&client, &client_size);
         if (bytes < 0) {
             fprintf(stderr, "Error: Receiving error.\n");
             exit(11);
         }
-        printf("Tomb adatok erkezese\n");
+        printf("Array data received.\n");
 
         int receivedNumValues = bytes / sizeof(int);
 
@@ -422,28 +473,14 @@ void ReceiveViaSocket() {
             exit(10);
         }
         if (receivedNumValues != NumValues) {
-            printf("bazmeg a kurva oreg anyad\n");
+            fprintf(stderr, "Error: Values do not match.\n");
+            exit(12);
         }
-        printf("Beerkezett adatok erkezese\n");
+        printf("Sending received data.\n");
 
         BMPcreator(data, NumValues);
         free(data);
     }
 
     close(s);
-}
-
-void SignalHandler(int sig) {
-    if (sig == SIGINT) {
-        printf("Goodbye!\n");
-        EXIT_SUCCESS;
-    }
-    if (sig == SIGUSR1) {
-        fprintf(stderr, "Error: Data transfer through file is not available\n");
-        exit(7);
-    }
-    if (sig == SIGALRM) {
-        fprintf(stderr, "Error: Server currently not responding\n");
-        exit(8);
-    }
 }
